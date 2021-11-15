@@ -24,7 +24,7 @@ app.get("api/workouts", async (req,res) =>{
     }
 });
 
-app.post("/api/workouts",(reqq,res)=>{
+app.post("/api/workouts",(req,res)=>{
     Workout.create(req.body)
     .then(dbworkout =>{
         res.json(dbworkout)

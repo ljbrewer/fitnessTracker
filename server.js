@@ -2,8 +2,11 @@ const express= require("express");
 const path = require('path');
 const logger = require("morgan");
 const mongoose = require("mongoose");
-const Workout = require('./models/Workout')
+const Workout = require('./models/Workout');
+const { Router } = require("express");
 require('dotenv').config();
+
+const PORT = process.env.PORT || 3000;
 
 const app = express();
 
@@ -18,31 +21,57 @@ mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost/workout", {
     useNewUrlParser: true,
     useFindAndModify: false
 });
-
+// routes
 
 
 app.get("/", (req, res) => {
-    res.sendfile(path.join("/public/index.html"))
+    res.sendFile(path.join(__dirname, "/public/index.html"))
 });
 
 app.get("/exercise", (req, res) => {
-    res.sendfile(path.join("/public/exercise.html"))
+    res.sendFile(path.join(__dirname, "/public/exercise.html"))
 });
 
 app.get("/stats", (req, res) => {
-    res.sendfile(path.join("/public/stats.html"))
+    res.sendFile(path.join(__dirname, "/public/stats.html"))
 });
 
 //API Routes
 app.get("/api/workouts", async (req, res) => {
     try {
-        const workout = await Workout.find().sort({ day: -1 }).limit(1)
-
+       //const workout = await Workout.find().sort({ day: -1 }).limit(1)
+        const workout = await Workout.aggregate([
+        {
+        $addFields: {
+            totalDuration: {
+                $sum: '$exercises.duration',
+            },
+          },
+        }, 
+    ])
         res.json(workout)
     } catch (err) {
         console.log(err)
         res.json(err)
     }
+});
+
+app.get('/api/workouts/range', (req,res) => {
+    Workout.aggregate([
+        {
+        $addFields: {
+            totalDuration: {
+                $sum: '$exercises.duration',
+            },
+          },
+        }, 
+    ])
+    .then((dbWorkouts) =>{
+        res.json(dbWorkouts);
+    })
+    .catch((err)=>{
+        res.json(err);
+    });
 });
 
 app.post("/api/workouts", (req, res) => {
@@ -53,8 +82,9 @@ app.post("/api/workouts", (req, res) => {
 })
 
 app.put("/api/workouts/:id", (req, res) => {
+    console.log(req.body)
     Workout.updateOne({ _id: req.params.id }, {
-        $push: { exercises: req.body }
+        $push: { exercises: req.body },
     })
         .then(dbworkout => {
             res.json(dbworkout)
